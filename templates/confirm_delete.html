@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}确认删除 · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>确认删除任务</h2>
+  <p class="warn">
+    即将删除以下任务，删除后无法恢复：
+  </p>
+
+  <dl class="detail">
+    <dt>任务名称</dt><dd>{{ task.name }}</dd>
+    <dt>所属课程</dt><dd>{{ task.course }}</dd>
+    <dt>截止日期</dt><dd>{{ task.due_date }}</dd>
+    <dt>状态</dt><dd>{{ task.status }}</dd>
+  </dl>
+
+  <div class="form-actions">
+    <form class="inline" method="post"
+          action="{{ url_for('tasks.delete', task_id=task.id) }}">
+      <button class="btn btn-danger" type="submit" id="confirm-delete">确认删除</button>
+    </form>
+    <a class="btn" href="{{ url_for('tasks.detail', task_id=task.id) }}">取消</a>
+  </div>
+</section>
+{% endblock %}

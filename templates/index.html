@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}任务列表 · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="stats">
+  <div class="stat">
+    <div class="stat-value">{{ stats.total }}</div>
+    <div class="stat-label">任务总数</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">{{ stats.done }}</div>
+    <div class="stat-label">已完成</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">{{ stats.rate }}%</div>
+    <div class="stat-label">完成率</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>筛选</h2>
+  <form class="filters" method="get" action="{{ url_for('tasks.index') }}">
+    <div class="field">
+      <label for="f-course">课程</label>
+      <select id="f-course" name="course">
+        <option value="">全部课程</option>
+        {% for c in courses %}
+          <option value="{{ c }}" {% if filters.course == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="f-status">状态</label>
+      <select id="f-status" name="status">
+        <option value="">全部状态</option>
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="f-priority">优先级</label>
+      <select id="f-priority" name="priority">
+        <option value="">全部优先级</option>
+        {% for p in priorities %}
+          <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="f-keyword">关键字</label>
+      <input id="f-keyword" type="text" name="keyword" value="{{ filters.keyword }}"
+             placeholder="名称或描述包含">
+    </div>
+
+    <div class="field actions">
+      <button class="btn btn-primary" type="submit">筛选</button>
+      <a class="btn" href="{{ url_for('tasks.index') }}">重置</a>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>任务列表 <small id="task-count">共 {{ tasks|length }} 条</small></h2>
+
+  {% if tasks %}
+  <table class="task-table">
+    <thead>
+      <tr>
+        <th>任务名称</th>
+        <th>课程</th>
+        <th>截止日期</th>
+        <th>优先级</th>
+        <th>状态</th>
+        <th>提醒</th>
+        <th class="col-actions">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr class="row-{{ t.status }} {% if t.due_state %}row-{{ t.due_state }}{% endif %}">
+        <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.name }}</a></td>
+        <td>{{ t.course }}</td>
+        <td>{{ t.due_date }}</td>
+        <td><span class="badge badge-p-{{ t.priority }}">{{ t.priority }}</span></td>
+        <td><span class="badge badge-s-{{ t.status }}">{{ t.status }}</span></td>
+        <td>
+          {% if t.due_label %}
+            <span class="due due-{{ t.due_state }}">{{ t.due_label }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="col-actions">
+          <form class="inline" method="post"
+                action="{{ url_for('tasks.change_status', task_id=t.id) }}">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <select name="status" class="select-inline">
+              {% for s in statuses %}
+                <option value="{{ s }}" {% if t.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-small" type="submit">更新</button>
+          </form>
+          <a class="btn btn-small" href="{{ url_for('tasks.edit', task_id=t.id) }}">编辑</a>
+          <a class="btn btn-small btn-danger" href="{{ url_for('tasks.delete', task_id=t.id) }}">删除</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">
+    {% if filters.course or filters.status or filters.priority or filters.keyword %}
+      当前筛选条件下没有任务。<a href="{{ url_for('tasks.index') }}">清除筛选</a>
+    {% else %}
+      还没有任务，<a href="{{ url_for('tasks.create') }}">创建第一条任务</a>吧。
+    {% endif %}
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+# pyproject.toml —— 只用来配置 pytest 与项目元信息（不改变运行方式）。
+[project]
+name = "studytask"
+version = "1.0.0"
+description = "StudyTask 个人学习任务管理系统（软件工程实验一）"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short -p no:cacheprovider"

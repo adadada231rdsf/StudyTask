@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# 本地数据库（每个同学生成的数据都不一样，不提交）
+instance/
+*.sqlite
+*.db
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store

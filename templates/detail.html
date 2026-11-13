@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ task.name }} · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>{{ task.name }}</h2>
+
+  <dl class="detail">
+    <dt>所属课程</dt><dd>{{ task.course }}</dd>
+    <dt>截止日期</dt>
+    <dd>
+      {{ task.due_date }}
+      {% if task.due_label %}<span class="due due-{{ task.due_state }}">{{ task.due_label }}</span>{% endif %}
+    </dd>
+    <dt>优先级</dt><dd><span class="badge badge-p-{{ task.priority }}">{{ task.priority }}</span></dd>
+    <dt>状态</dt><dd><span class="badge badge-s-{{ task.status }}">{{ task.status }}</span></dd>
+    <dt>任务描述</dt>
+    <dd class="desc">{{ task.description or '（无）' }}</dd>
+    <dt>创建时间</dt><dd>{{ task.created_at }}</dd>
+    <dt>更新时间</dt><dd>{{ task.updated_at }}</dd>
+  </dl>
+
+  <div class="form-actions">
+    <form class="inline status-form" method="post"
+          action="{{ url_for('tasks.change_status', task_id=task.id) }}">
+      <select name="status" class="select-inline">
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if task.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">切换状态</button>
+    </form>
+    <a class="btn" href="{{ url_for('tasks.edit', task_id=task.id) }}">编辑</a>
+    <a class="btn btn-danger" href="{{ url_for('tasks.delete', task_id=task.id) }}">删除</a>
+    <a class="btn" href="{{ url_for('tasks.index') }}">返回列表</a>
+  </div>
+</section>
+{% endblock %}
