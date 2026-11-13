@@ -1,0 +1,4 @@
+# 云端（Linux）生产部署额外用到的 WSGI 服务器。
+# 本地开发 / 测试不需要它，所以没有写在 requirements.txt 里，避免 Windows 上装不上。
+# 云端安装：pip install flask==2.3.3 gunicorn==21.2.0
+gunicorn==21.2.0

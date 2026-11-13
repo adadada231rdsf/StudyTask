@@ -132,13 +132,131 @@ python -m pytest
 
 ---
 
-## 4. 目录结构
+## 5. 部署到云服务器
+
+> 说明：指导书步骤 3 要求“部署到云服务器”，附录 A.5 又写了“不实现云部署”，两处有冲突。这里按“部署”来做，系统本身不需要改任何代码——它只是一个 Flask 应用，换到 Linux 上用 gunicorn 跑起来即可。
+> 指导书 1.4 还要求：**如果项目部署在云服务器，必须在 README 里给出访问地址**。访问地址见下方「部署完成后要做的三件事」。
+
+### 5.1 准备
+
+- 一台云服务器（阿里云 / 腾讯云 / 华为云的轻量应用服务器都可以，1 核 2G 足够）
+- 系统：Ubuntu 22.04 或 24.04
+- 安全组放行 **80** 和 **22** 两个端口（80 用来访问网页，22 用来 SSH 登录）
+
+### 5.2 上传代码
+
+在服务器上执行：
+
+```bash
+sudo apt update && sudo apt install -y python3 python3-venv python3-pip git
+git clone https://github.com/adadada231rdsf/StudyTask.git
+cd StudyTask
+```
+
+如果服务器访问 GitHub 慢，也可以在自己电脑上用 `scp` 上传，或者先打包再传：
+
+```bash
+# 在自己电脑上执行
+scp -r StudyTask root@服务器公网IP:/root/
+```
+
+### 5.3 装依赖并试运行
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install flask==2.3.3 gunicorn==21.2.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+python run.py --host 0.0.0.0 --port 8000
+```
+
+这时在自己电脑浏览器打开 `http://服务器公网IP:8000`，能看到列表页就说明能跑通了。按 `Ctrl+C` 停掉，接着做 5.4 让它常驻。
+
+### 5.4 用 gunicorn 常驻（systemd）
+
+```bash
+sudo nano /etc/systemd/system/studytask.service
+```
+
+写入下面内容，用户名按实际情况改（一般就是 `root` 或 `ubuntu`）：
+
+```ini
+[Unit]
+Description=StudyTask Flask App
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/StudyTask
+Environment="STUDYTASK_SECRET=换成一串随机字符"
+ExecStart=/home/ubuntu/StudyTask/.venv/bin/gunicorn -w 2 -b 0.0.0.0:8000 run:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动并设为开机自启：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now studytask
+sudo systemctl status studytask      # 看到 active (running) 即成功
+```
+
+### 5.5 80 端口对外访问（nginx 反向代理）
+
+直接用 `http://IP:8000` 也能访问，但交作业时更规范的做法是让 80 端口对外：
+
+```bash
+sudo apt install -y nginx
+sudo nano /etc/nginx/sites-available/studytask
+```
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/studytask /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### 5.6 部署完成后要做的三件事
+
+1. **改 README**：把访问地址填到下面这一行（指导书 1.4 的硬要求）：
+   > 访问地址：http://______（填服务器的公网 IP 或域名）
+2. **截图留证**：在自己的浏览器里打开这个地址，截一张列表页，存到 `docs/` 下（比如 `docs/screenshot_deploy.png`），这是部署成功最直接的证据。
+3. **注意安全**：这个系统没有登录功能，公网上谁拿到地址都能改数据。作业期间放几天可以；如果长期挂着，建议在 nginx 上加一个 `allow 你的IP; deny all;`，或者作业交完就 `sudo systemctl stop studytask`。
+
+### 5.7 常见问题
+
+| 现象 | 原因 | 解决 |
+| --- | --- | --- |
+| 浏览器打不开 | 安全组没放行端口 | 云控制台 → 安全组 → 添加入方向规则 80 |
+| `Address already in use` | 8000 端口被占 | 换端口，或 `sudo lsof -i:8000` 找出占用进程 |
+| 页面 502 | gunicorn 没起来 | `sudo journalctl -u studytask -n 50` 看日志 |
+| 数据要备份 | SQLite 就是单个文件 | `cp instance/studytask.sqlite 备份路径` |
+
+---
+
+## 6. 目录结构
 
 ```
 StudyTask/
 ├── run.py                 # 启动入口
 ├── seed_demo.py           # 演示数据脚本
 ├── requirements.txt
+├── requirements-deploy.txt # 云端额外需要的 gunicorn
 ├── pyproject.toml         # pytest 配置
 ├── .gitignore
 ├── project/               # 应用代码
@@ -156,8 +274,8 @@ StudyTask/
 
 ---
 
-## 5. 已知限制
+## 7. 已知限制
 
-- 单用户系统，没有登录与权限，不要部署到公网。
-- 开发服务器（`python run.py`）只适合本地演示；按实验指导书 A.5，本实验不实现云部署。
+- 单用户系统，没有登录与权限。作业期间部署在公网上可以访问，但不要长期对外开放（见 5.6 第 3 条）。
+- 本地用开发服务器 `python run.py` 即可；云端用 gunicorn（见第 5 节）。两者跑的是同一个 `create_app()`，没有代码差异。
 - 数据库为单个 SQLite 文件，备份即复制 `instance/studytask.sqlite`。
